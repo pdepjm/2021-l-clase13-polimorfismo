@@ -1,3 +1,7 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Clase 12 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 /* 
 1. Modelar las bandas según su género
     ROCK --> The Beatles - Rolling Stones - Los Redondos - Divididos - Soda Stereo - Los Piojos
@@ -177,7 +181,7 @@ esCareta(Festival):-
 
 % Opcion 2 : No existe
 esCaretaV2(Festival):-
-    participaDe(Festival,Banda),
+    participaDe(Festival,_),
     not(tieneBandaDeCumbia(Festival)).
 
 tieneBandaDeCumbia(Festival):-
@@ -208,7 +212,7 @@ esMonotematicoMALHECHO(Festival):-
     festival(Festival),    % existe un festival y...
     forall(
         participaDe(Festival, Banda), 
-        esBandaDe(Genero, Banda)
+        esBandaDe(_, Banda)
     ). % Toda banda de ese festival tiene ALGÚN género.
     
 % Opción 2: Not -> Negar el forall
@@ -250,3 +254,92 @@ participaEnMasDeUnFestival(Banda):-
     participaDe(OtroFestival,Banda),
     participaDe(Festival,Banda),
     OtroFestival \= Festival.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Clase 13 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% nacionalidad(Persona, Pais).
+nacionalidad(lita, argentina).
+nacionalidad(paul, inglaterra).
+
+
+leInteresa(Persona, Banda) :-
+    nacionalidad(Persona, Pais),
+    origen(Pais, Banda).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% showMasivo(Festival, CantidadDeBandas, Pais)
+% showPropio(Capacidad)
+% vivoDeInstagram(Cuenta, DuracionEsperada, CantidadSeguidores)
+presentacion(losPiojos, showMasivo(cosquinRock, 15, argentina)).
+presentacion(damasGratis, showPropio(9290)).
+presentacion(oneDirection, vivoDeInstagram(onedirection, 2.5, 22300000)).
+
+
+% Pattern Matching y Universo Cerrado
+asistenciaAsegurada(Persona, showMasivo(_, _, Pais)) :- nacionalidad(Persona, Pais).
+asistenciaAsegurada(_, vivoDeInstagram(_, Duracion, _)) :- Duracion < 3.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Polimorfismo
+quiereVer(Persona, Banda) :- 
+    presentacion(Banda, Evento),
+    asistenciaAsegurada(Persona, Evento).
+
+
+:- begin_tests(asistencia_asegurada).
+
+test(show_masivo_local, nondet) :- quiereVer(lita, losPiojos).
+test(show_masivo_extrajero, fail) :- quiereVer(paul, losPiojos).
+test(show_propio, fail) :- quiereVer(_, damasGratis).
+test(vivo_de_ig) :- quiereVer(_, oneDirection).
+%TODO: Falta uno de ig que no sea asegurada
+
+:- end_tests(asistencia_asegurada).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Pattern Matching y Aritmética
+asistenciaProyectada(showPropio(Capacidad), Capacidad).
+asistenciaProyectada(showMasivo(_, CantidadDeBandas, _), Asistencia) :- 
+    Asistencia is CantidadDeBandas * 1000.
+asistenciaProyectada(vivoDeInstagram(_, DuracionEsperada, CantidadSeguidores), Asistencia) :- 
+    Asistencia is CantidadSeguidores / DuracionEsperada / 1000.
+
+
+:- begin_tests(asistencia_proyectada).
+
+test(show_masivo) :- asistenciaProyectadaPorBanda(losPiojos, 15000).
+test(show_propio) :- asistenciaProyectadaPorBanda(damasGratis, 9290).
+test(vivo_de_ig) :- asistenciaProyectadaPorBanda(oneDirection, 8920.0).
+
+:- end_tests(asistencia_proyectada).
+
+
+asistenciaProyectadaPorBanda(Banda, Asistencia) :-
+    presentacion(Banda, Evento),
+    asistenciaProyectada(Evento, Asistencia).
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Polimorfismo y Máximo
+bandaMasPopular(Banda) :-
+    presentacion(Banda, Evento),
+    eventoMasEsperado(Evento).
+
+eventoMasEsperado(Evento) :-
+    asistenciaProyectada(Evento, Asistencia),
+    forall(asistenciaProyectadaPorBanda(_, OtraAsistencia), OtraAsistencia =< Asistencia).
+
+
+
+
