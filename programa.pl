@@ -261,85 +261,146 @@ participaEnMasDeUnFestival(Banda):-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Clase 13 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% nacionalidad(Persona, Pais).
-nacionalidad(lita, argentina).
-nacionalidad(paul, inglaterra).
+% hay altas chances que una persona tenga interés por las bandas que son de su nacionalidad.
 
+% Ya contamos con:
+    % origen(Pais, Banda).
+    % esNacional(Banda).
+    % esExtranjera(Banda)
 
-leInteresa(Persona, Banda) :-
-    nacionalidad(Persona, Pais),
-    origen(Pais, Banda).
+interes(Persona, Banda) :-
+    origen(Pais, Banda),
+    nacionalidad(Pais, Persona).
+
+nacionalidad(argentina, lita).
+nacionalidad(inglaterra, paul).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+/*
+Por ejemplo, sabemos de los siguientes eventos:
+    - losPiojos tuvieron:
+        un show masivo en cosquinRock donde participaron 15 bandas y se hizo en Argentina
+        un show propio en un estadio para 70.074 personas
+    - damasGratis hacen un show propio en un lugar que tiene capacidad para 9.290 personas
+    - oneDirection planea un vivo de instagram en su cuenta oficial: oneDirection con una duracion estimada de 2 horas y media. En su cuenta tienen 22.300.000 followers.
+*/
+% Queremos saber todos los eventos de una banda.
+    % Presentacion pueden ser Show masivo, Show propio, Vivo de ig
+    % Functor(es) -> Inidividuos compuestos (de otros individuos) 
+    %               -> Son como tuplas pero con nombres
+    %               -> Son individuos, no predicados, no tienen valor de verdad, son un dato
+
+% evento(Banda, Presentacion).
+% Siendo Presentacion:
+    % showMasivo(Festival, CantBandas, Pais)
+    % showPropio(Capacidad)
+    % vivoDeIG(Cuenta, DuracionEstimada, Followers)
+
+evento(losPiojos, showMasivo(cosquinRock, 15, argentina)).
+evento(losPiojos, showPropio(70074)).
+evento(damasGratis, showPropio(9290)).
+evento(oneDirection, vivoDeIG(oneDirection, 2.5, 22300000)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% showMasivo(Festival, CantidadDeBandas, Pais)
-% showPropio(Capacidad)
-% vivoDeInstagram(Cuenta, DuracionEsperada, CantidadSeguidores)
-presentacion(losPiojos, showMasivo(cosquinRock, 15, argentina)).
-presentacion(damasGratis, showPropio(9290)).
-presentacion(oneDirection, vivoDeInstagram(onedirection, 2.5, 22300000)).
+/*
+asistenciaAsegurada/2: persona y Presentacion 
+    -> esa persona podria asistir fácilmente a una presentacion
+Para los show masivos si el país coincide con tu nacionalidad
+Para los vivos de instagram si se espera una duración menor a 3 horas
+*/
+
+asistenciaAsegurada(Persona, showMasivo(_, _, Pais) ) :-
+    nacionalidad(Pais, Persona).
+
+asistenciaAsegurada(_, vivoDeIG(_, DuracionEstimada, _) ) :-
+    DuracionEstimada < 3.
 
 
-% Pattern Matching y Universo Cerrado
-asistenciaAsegurada(Persona, showMasivo(_, _, Pais)) :- nacionalidad(Persona, Pais).
-asistenciaAsegurada(_, vivoDeInstagram(_, Duracion, _)) :- Duracion < 3.
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% Polimorfismo
-quiereVer(Persona, Banda) :- 
-    presentacion(Banda, Evento),
-    asistenciaAsegurada(Persona, Evento).
 
 
 :- begin_tests(asistencia_asegurada).
+test(show_masivo_ok, nondet) :-
+	asistenciaAsegurada(lita,  showMasivo(cosquinRock,15,argentina)).
 
-test(show_masivo_local, nondet) :- quiereVer(lita, losPiojos).
-test(show_masivo_extrajero, fail) :- quiereVer(paul, losPiojos).
-test(show_propio, fail) :- quiereVer(_, damasGratis).
-test(vivo_de_ig) :- quiereVer(_, oneDirection).
-%TODO: Falta uno de ig que no sea asegurada
+test(show_masivo_fail, fail) :-
+	asistenciaAsegurada(paul,  showMasivo(cosquinRock,15,argentina)).
+
+test(vivo_de_ig, nondet) :-
+	asistenciaAsegurada(lita, vivoDeIG(oneDirection, 2.5, 22300000)).
+
+test(vivo_de_ig_fail, fail) :-
+	asistenciaAsegurada(lita, vivoDeIG(oneDirection, 5, 22300000)).
+
+test(show_propio, fail) :-
+	asistenciaAsegurada(paul, showPropio(9290)).
 
 :- end_tests(asistencia_asegurada).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Pattern Matching y Aritmética
-asistenciaProyectada(showPropio(Capacidad), Capacidad).
-asistenciaProyectada(showMasivo(_, CantidadDeBandas, _), Asistencia) :- 
-    Asistencia is CantidadDeBandas * 1000.
-asistenciaProyectada(vivoDeInstagram(_, DuracionEsperada, CantidadSeguidores), Asistencia) :- 
-    Asistencia is CantidadSeguidores / DuracionEsperada / 1000.
+% quiereVer/2: Persona y banda
+    % Esto pasa cuando la banda va a presentarse en un evento para el cual la persona tiene asistencia asegurada.
+
+quiereVer(Persona, Banda) :-
+    evento(Banda, Presentacion),    % No importa el tipo de presentacion
+    asistenciaAsegurada(Persona, Presentacion). % POLIMORFISMO con la presentacion
 
 
-:- begin_tests(asistencia_proyectada).
-
-test(show_masivo) :- asistenciaProyectadaPorBanda(losPiojos, 15000).
-test(show_propio) :- asistenciaProyectadaPorBanda(damasGratis, 9290).
-test(vivo_de_ig) :- asistenciaProyectadaPorBanda(oneDirection, 8920.0).
-
-:- end_tests(asistencia_proyectada).
 
 
-asistenciaProyectadaPorBanda(Banda, Asistencia) :-
-    presentacion(Banda, Evento),
-    asistenciaProyectada(Evento, Asistencia).
+:- begin_tests(quiere_ver).
+
+test(lita_quiere_ver, set(Banda = [losPiojos, oneDirection])) :-
+	quiereVer(lita, Banda).
+
+test(paul_quiere_ver, set(Banda = [oneDirection])) :-
+	quiereVer(paul, Banda).
+
+:- end_tests(quiere_ver).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+/*
+asistenciaProyectada/2: Evento y Asistencia
+    Para los show propios estimamos la capacidad del lugar
+    Para un show masivo es 1000 veces la cantidad de bandas del festival
+    Para un vivo de instagram es la centésima parte de la cantidad de seguidores dividido la duración esperada
+*/
+
+    % showMasivo(Festival, CantBandas, Pais)
+    % showPropio(Capacidad)
+    % vivoDeIG(Cuenta, DuracionEstimada, Followers)
+
+% asistenciaProyectada(Presentacion, Asistencia).
+
+asistenciaProyectada(   showPropio(Capacidad),                     Capacidad).
+
+asistenciaProyectada(   showMasivo(_, CantBandas, _),              Asistencia) :-
+    is(Asistencia, 1000 * CantBandas).
+
+asistenciaProyectada(   vivoDeIG(_, DuracionEstimada, Followers),  Asistencia) :-
+    is(Asistencia, Followers / 100 / DuracionEstimada).
+
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Polimorfismo y Máximo
-bandaMasPopular(Banda) :-
-    presentacion(Banda, Evento),
-    eventoMasEsperado(Evento).
+% La banda más popular del momento es la que proyecta la mayor cantidad de asistencia en su evento más popular.
 
-eventoMasEsperado(Evento) :-
-    asistenciaProyectada(Evento, Asistencia),
-    forall(asistenciaProyectadaPorBanda(_, OtraAsistencia), OtraAsistencia =< Asistencia).
+bandaMasPopular(BandaMasPopular) :- % máximo? forall? not?
+    banda(BandaMasPopular),
+    forall(bandaConEvento(Banda), tieneMasAsistencia(BandaMasPopular, Banda)).
 
+bandaConEvento(Banda) :- evento(Banda, _).
 
+tieneMasAsistencia(BandaConMuchaAsistencia, OtraBanda) :-
+    asistenciaDePresentacion(BandaConMuchaAsistencia, AsistenciaMayor),
+    asistenciaDePresentacion(OtraBanda, AsistenciaMenor),
+    AsistenciaMayor >= AsistenciaMenor.
 
-
+asistenciaDePresentacion(Banda, Asistencia) :-
+    evento(Banda, Presentacion),
+    asistenciaProyectada(Presentacion, Asistencia).
